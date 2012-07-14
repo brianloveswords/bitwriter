@@ -1,5 +1,6 @@
-var errs = require('errs');
 var util = require('util');
+var errors = require('./lib/errors.js');
+var Range = require('./lib/range.js');
 var bufproto = Buffer.prototype;
 
 function BitWriter(length, endianness) {
@@ -67,13 +68,15 @@ BitWriter.prototype.write = function write(data) {
 
 BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   var type;
+  var range = BitWriter.UNSIGNED_RANGE[32];
+  var validSizes = BitWriter.INT_SIZES;
 
-  if (integer > BitWriter.MAX_VALUE || integer < BitWriter.MIN_VALUE)
-    throw rangeError(integer);
+  if (!range.test(integer))
+    throw errors.range(integer, range);
 
   if (opts && opts.size) {
-    if (!~BitWriter.INT_SIZES.indexOf(opts.size))
-      throw sizeError(opts.size);
+    if (!~validSizes.indexOf(opts.size))
+      throw errors.size(opts.size, validSizes);
 
     var methodlist = this._methods.bySize;
     type = methodlist[integer > 0 ? 'unsigned' : 'signed'][opts.size];
@@ -85,11 +88,11 @@ BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   }
 
   if (!type)
-    throw dispatchError(integer, opts);
+    throw errors.dispatch(integer, opts);
 
   var remaining = this.remaining();
   if (type.length > remaining)
-    throw overflowError(integer, type.length, remaining);
+    throw errors.overflow(integer, type.length, remaining);
 
   type.method.call(this._buffer, integer, this.position());
   this.move(type.length);
@@ -102,32 +105,68 @@ BitWriter.prototype.writeString = function writeString(string, opts) {
     opts.null = true;
 
   var buf = Buffer(string);
+  var len = buf.length;
 
+  // when given a size we want to write exactly that many bytes and either
+  // truncate the string or pad the rest with nulls.
   if (opts.size) {
-    if (buf.length > opts.size)
-      return this.write(buf.slice(0, opts.size));
-    var nulls = Buffer(opts.size - buf.length);
+    var size = opts.size;
+    var nulls;
+
+    if (len > size)
+      return this.write(buf.slice(0, size));
+
+    nulls = Buffer(size - len);
     nulls.fill(0);
     return this.write(Buffer.concat([buf, nulls]));
   }
 
-  var remaining = this.remaining();
-  if (buf.length > remaining)
-    throw overflowError(string, buf.length, remaining);
-
+  if (buf.length > this.remaining())
+    throw errors.overflow(string, buf.length, this.remaining());
 
   // we only want to write the null byte if the user hasn't said not to
   // and if there's room left in the main buffer
-  if (opts.null !== false && (remaining - buf.length) > 0)
-    buf = Buffer.concat([buf, Buffer([0x00])]);
-  return this.write(buf);
+  this.write(buf);
+  if (opts.null !== false && this.remaining() > 0)
+    this.write(BitWriter.NULL_BYTE);
+
+  return this;
 };
 
-BitWriter.prototype.writeRaw = function writeRaw(array) {
-  for (var n = 0; n < array.length; n++) {
-    this._buffer.writeUInt8(array[n], this._pos++);
+
+/**
+ * Write raw bytes to the buffer.
+ *
+ * @param {Array-like} arry
+ * @param {Object} opts
+ *   - `safe`: skip type/range checks
+ */
+
+BitWriter.prototype.writeRaw = function writeRaw(arry, opts) {
+  if (Buffer.isBuffer(arry)) return this._copyBuffer(arry);
+
+  // don't bother to type or range check if we know the string is safe.
+  // this will save us a few cycles, but can be risky if they array isn't
+  // actually checked beforehand.
+  if (opts && opts.safe === true) {
+    for (var n = 0; n < arry.length; n++)
+      this._buffer.writeUInt8(arry[n], this._pos++);
+    return this;
   }
-  return this;
+
+  // we need to make sure we're not trying to write weird objects or we'll
+  // get an AssertionError from buffer. we also ensure that the value is
+  // within the boundaries of an eight bit integer or we'll get unexpected
+  // results down the line somewhere.
+  var eightBitRange = BitWriter.UNSIGNED_RANGE[8];
+  for (var n = 0; n < arry.length; n++) {
+    if (typeof arry[n] !== 'number')
+      throw errors.arrayType(arry, n);
+    if (!eightBitRange.test(arry[n]))
+      throw errors.range(arry[n], eightBitRange);
+  }
+
+  return this.writeRaw(array, { safe: true });
 };
 
 /**
@@ -172,7 +211,7 @@ BitWriter.prototype.full = function () {
 BitWriter.prototype.position = function (p) {
   if (typeof p !== 'undefined') {
     if (p > this.length || p < 0)
-      throw rangeError(p, [0, this.length]);
+      throw errors.range(p, [0, this.length]);
     this._pos = p;
     return this;
   }
@@ -187,6 +226,13 @@ BitWriter.prototype.move = function (amount) {
   var pos = this.position();
   return this.position(pos + amount);
 };
+
+BitWriter.prototype._copyBuffer = function copyBuffer(buf) {
+  buf.copy(this, this.position());
+  this.move(buf.length);
+  return this;
+};
+
 
 BitWriter.prototype._generateMethodTable = function generateMethodTable() {
   var e = this._endianness;
@@ -232,14 +278,15 @@ BitWriter.prototype._generateMethodTable = function generateMethodTable() {
 };
 
 BitWriter.prototype._makeArrayLike = function makeArrayLike() {
+  var eightBitRange = BitWriter.UNSIGNED_RANGE[8];
   var len = this.length;
   for (var n = 0; n < this.length; n++) {
     (function (n) {
       Object.defineProperty(this, n, {
         get: function () { return this.get(n) },
         set: function (v) {
-          if (v < -0x80 || v > 0xff)
-            throw rangeError(v, [-0x80, 0xff]);
+          if (!eightBitRange.test(v))
+            throw errors.range(v, eightBitRange);
           return this.set(n, v);
         },
         enumerable: true,
@@ -248,46 +295,13 @@ BitWriter.prototype._makeArrayLike = function makeArrayLike() {
     }).bind(this)(n);
   }
 };
-BitWriter.MAX_VALUE = 0xffffffff;
-BitWriter.MIN_VALUE = -0x80000000;
+BitWriter.UNSIGNED_RANGE = {
+  '8': Range(-0x80, 0xff),
+  '16': Range(-0x8000, 0xffff),
+  '32': Range(-0x80000000, 0xffffffff)
+};
 BitWriter.INT_SIZES = [8, 16, 32];
-
-function overflowError(data, length, remaining) {
-  return errs.create({
-    name: 'OverflowError',
-    message: 'Not enough space in the buffer left to write `' + data + '` (tried to write ' + length + ' bytes, only ' + remaining +  ' remaining.)',
-    writeLength: length,
-    remaining: remaining,
-    amountOver: length - remaining,
-  });
-};
-
-function sizeError(size, range) {
-  range = range || BitWriter.INT_SIZES;
-  return errs.create({
-    name: 'RangeError',
-    message: util.format('Given an invalid size for writing an int (given: %s, expects: %j)', size, range),
-    sizeGiven: size,
-  });
-};
-
-function rangeError(num, range) {
-  range = range || [BitWriter.MIN_VALUE, BitWriter.MAX_VALUE];
-  return errs.create({
-    name: 'RangeError',
-    message: util.format('Value outside of the valid range %j (given: %d)', range, num),
-    min: range[0],
-    max: range[1],
-    integer: num,
-  });
-};
-
-function dispatchError(data, opts) {
-  return errs.create({
-    name: 'DispatchError',
-    message: util.format('Could not figure out how to dispatch (data: %j, opts: %j)', data, opts)
-  });
-};
+BitWriter.NULL_BYTE = Buffer([0x00]);
 
 function between(v, min, max) { return v >= min && v <= max }
 function gentestInt(min, max) { return function (v) { return between(v, min, max) } }
