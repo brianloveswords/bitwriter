@@ -171,6 +171,8 @@ BitWriter.prototype.full = function () {
 };
 BitWriter.prototype.position = function (p) {
   if (typeof p !== 'undefined') {
+    if (p > this.length || p < 0)
+      throw rangeError(p, [0, this.length]);
     this._pos = p;
     return this;
   }
@@ -235,6 +237,11 @@ BitWriter.prototype._makeArrayLike = function makeArrayLike() {
     (function (n) {
       Object.defineProperty(this, n, {
         get: function () { return this.get(n) },
+        set: function (v) {
+          if (v < -0x80 || v > 0xff)
+            throw rangeError(v, [-0x80, 0xff]);
+          return this.set(n, v);
+        },
         enumerable: true,
         configurable: true
       });
@@ -255,27 +262,30 @@ function overflowError(data, length, remaining) {
   });
 };
 
-function sizeError(size) {
+function sizeError(size, range) {
+  range = range || BitWriter.INT_SIZES;
   return errs.create({
     name: 'RangeError',
-    message: util.format('Given an invalid size for writing an int (given: %s, expects: %s)', size, JSON.stringify(BitWriter.INT_SIZES)),
+    message: util.format('Given an invalid size for writing an int (given: %s, expects: %j)', size, range),
     sizeGiven: size,
   });
 };
 
-function rangeError(num) {
+function rangeError(num, range) {
+  range = range || [BitWriter.MIN_VALUE, BitWriter.MAX_VALUE];
   return errs.create({
     name: 'RangeError',
-    message: util.format('Integer outside of the range [-2147483648, 4294967295] (given: %d)', num),
+    message: util.format('Value outside of the valid range %j (given: %d)', range, num),
+    min: range[0],
+    max: range[1],
     integer: num,
   });
 };
 
 function dispatchError(data, opts) {
-  var str = JSON.stringify;
   return errs.create({
     name: 'DispatchError',
-    message: util.format('Could not figure out how to dispatch (data: %s, opts: %s)', str(data), str(opts))
+    message: util.format('Could not figure out how to dispatch (data: %j, opts: %j)', data, opts)
   });
 };
 
