@@ -210,10 +210,10 @@ test('writing foreign text', function (t) {
 test('attaching to object', function (t) {
   var buf = BitWriter(3);
   var obj = { playItAgain: 'sam' }
-  buf.attach(obj);
+  buf.attach(obj, 'data');
   obj.write('lol');
   t.same(obj.playItAgain, 'sam');
-  t.same(buf.out(), Buffer('lol'));
+ t.same(obj.data.out(), Buffer('lol'));
   t.end();
 });
 
@@ -287,7 +287,7 @@ test('given a huge number', function (t) {
   try { buf.write(1e12) }
   catch (err) {
     t.same(err.name, 'RangeError')
-    t.same(err.integer, 1e12);
+    t.same(err.value, 1e12);
   }
   t.end();
 });
@@ -350,6 +350,13 @@ test('moving cursor, bad values', function (t) {
   } catch (err) {
     console.dir(err);
     t.same(err.name, 'TypeError');
+  }
+
+  try {
+    buf.move(+1000);
+  } catch (err) {
+    console.dir(err);
+    t.same(err.name, 'RangeError');
   }
   t.end();
 });

@@ -186,7 +186,7 @@ BitWriter.prototype.remaining = function () {
  * @param {Object} obj
  */
 
-BitWriter.prototype.attach = function (obj) {
+BitWriter.prototype.attach = function (obj, key) {
   var proto = BitWriter.prototype;
   Object.keys(proto).filter(function (m) {
     return m.match(/^write/);
@@ -194,6 +194,7 @@ BitWriter.prototype.attach = function (obj) {
     var bound = this[method].bind(this);
     obj[method] = bound;
   }.bind(this));
+  if (key) obj[key] = this;
   return obj;
 };
 
@@ -211,11 +212,12 @@ BitWriter.prototype.full = function () {
   return this.remaining() === 0;
 };
 BitWriter.prototype.position = function (p) {
+  var range = Range(0, this.length);
   if (typeof p !== 'undefined') {
     if (typeof p !== 'number')
       throw errors.type(p, 'Number');
-    if (p > this.length || p < 0 || isNaN(p))
-      throw errors.range(p, [0, this.length]);
+    if (!range.test(p) || isNaN(p))
+      throw errors.range(p, range);
     this._pos = p;
     return this;
   }
