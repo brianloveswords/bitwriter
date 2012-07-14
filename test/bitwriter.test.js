@@ -118,6 +118,13 @@ test('raw bytes, array', function (t) {
   t.end();
 });
 
+test('raw bytes, array with negative bytes', function (t) {
+  var buf = new BitWriter(4);
+  buf.write([-1, -2, -3, -4]);
+  t.same(buf.out(), Buffer([-1, -2, -3, -4]));
+  t.end();
+});
+
 test('raw bytes, buffer', function (t) {
   var buf = new BitWriter(8);
   buf.write(Buffer([0x00, 0x00]))
@@ -132,7 +139,6 @@ test('raw bytes, array, bad types', function (t) {
 
   try { buf.write(arr) }
   catch (err) {
-    console.dir(err);
     t.same(err.name, 'TypeError');
     t.end();
   }
@@ -302,13 +308,20 @@ test('write position', function (t) {
 });
 
 test('write position, invalid', function (t) {
-  t.plan(2);
   var buf = BitWriter(4);
   try { buf.position(-1); t.fail('should not be able to write negative position') }
   catch (err) { t.same(err.name, 'RangeError') }
 
   try { buf.position(5); t.fail('should not be able to write position greater than length') }
   catch (err) { t.same(err.name, 'RangeError') }
+
+  try { buf.position(Infinity); t.fail('should not be able to write position of infinity') }
+  catch (err) { t.same(err.name, 'RangeError') }
+
+  try { buf.position(NaN); t.fail('should not be able to write position NaN') }
+  catch (err) { t.same(err.name, 'RangeError') }
+
+  t.end();
 });
 
 test('reseting to 0', function (t) {
@@ -325,6 +338,19 @@ test('moving cursor', function (t) {
   buf.move(-2);
   t.same(buf.position(), 2);
   t.same(buf.remaining(), 2);
+  t.end();
+});
+
+test('moving cursor, bad values', function (t) {
+  var buf = BitWriter(4);
+  buf.write('helo');
+  try {
+    buf.move({ham: 'sandwich'});
+    t.fail('should fail on non-numeric input');
+  } catch (err) {
+    console.dir(err);
+    t.same(err.name, 'TypeError');
+  }
   t.end();
 });
 
@@ -355,3 +381,4 @@ test('array access, range error', function (t) {
   }
   t.end();
 });
+

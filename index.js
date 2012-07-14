@@ -32,7 +32,9 @@ BitWriter.prototype.initialize = function initialize(length, endianness) {
  * @return {Buffer}
  */
 
-BitWriter.prototype.out = function out() { return this._buffer };
+BitWriter.prototype.out = function out() {
+  return this._buffer
+};
 
 /**
  * Figure out what the best way to write to the buffer is and dispatch
@@ -150,7 +152,7 @@ BitWriter.prototype.writeRaw = function writeRaw(arry, opts) {
   // actually checked beforehand.
   if (opts && opts.safe === true) {
     for (var n = 0; n < arry.length; n++)
-      this._buffer.writeUInt8(arry[n], this._pos++);
+      this.write8(arry[n]);
     return this;
   }
 
@@ -166,7 +168,7 @@ BitWriter.prototype.writeRaw = function writeRaw(arry, opts) {
       throw errors.range(arry[n], eightBitRange);
   }
 
-  return this.writeRaw(array, { safe: true });
+  return this.writeRaw(arry, { safe: true });
 };
 
 /**
@@ -210,7 +212,9 @@ BitWriter.prototype.full = function () {
 };
 BitWriter.prototype.position = function (p) {
   if (typeof p !== 'undefined') {
-    if (p > this.length || p < 0)
+    if (typeof p !== 'number')
+      throw errors.type(p, 'Number');
+    if (p > this.length || p < 0 || isNaN(p))
       throw errors.range(p, [0, this.length]);
     this._pos = p;
     return this;
@@ -223,6 +227,8 @@ BitWriter.prototype.reset = function () {
   return this;
 };
 BitWriter.prototype.move = function (amount) {
+  if (typeof amount !== 'number')
+    throw errors.type(amount, 'Number');
   var pos = this.position();
   return this.position(pos + amount);
 };
