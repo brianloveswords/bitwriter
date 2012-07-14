@@ -2,6 +2,16 @@
 
 A better interface for writing bytes to a buffer. 
 
+# Install & Usage
+
+```bash
+npm install bitwriter
+```
+
+```js
+var BitWriter = require('bitwriter');
+```
+
 # API
 `BitWriter` Inherits from `Buffer`, so you get all of the buffer methods
 (`fill`, `slice`, `copy`, etc) as well.
