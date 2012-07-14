@@ -1,12 +1,13 @@
 # bitwriter
 
-A better interface for writing bytes to a buffer. 
+A better interface for writing bytes to a buffer with a priority on safety.
 
-# Install & Usage
+## Install
 
 ```bash
 npm install bitwriter
 ```
+## Usage
 
 ```js
 var BitWriter = require('bitwriter');
