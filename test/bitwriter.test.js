@@ -126,6 +126,14 @@ test('raw bytes, buffer', function (t) {
   t.end();
 });
 
+test('raw bytes, array, bad types', function (t) {
+  var buf = new BitWriter(8);
+  var arr = [1, 2, 'wut', 'lol', { wrench: true }];
+  buf.write(arr);
+});
+
+
+
 test('using with Buffer.concat', function (t) {
   var str = 'you look nice today';
   var buf = BitWriter(str.length);
@@ -278,6 +286,16 @@ test('write position', function (t) {
   t.end();
 });
 
+test('write position, invalid', function (t) {
+  t.plan(2);
+  var buf = BitWriter(4);
+  try { buf.position(-1); t.fail('should not be able to write negative position') }
+  catch (err) { t.same(err.name, 'RangeError') }
+
+  try { buf.position(5); t.fail('should not be able to write position greater than length') }
+  catch (err) { t.same(err.name, 'RangeError') }
+});
+
 test('reseting to 0', function (t) {
   var buf = BitWriter(4);
   buf.write('lol');
@@ -292,5 +310,33 @@ test('moving cursor', function (t) {
   buf.move(-2);
   t.same(buf.position(), 2);
   t.same(buf.remaining(), 2);
+  t.end();
+});
+
+test('array access', function (t) {
+  var buf = BitWriter(4);
+  buf.fill(0xdd);
+
+  t.same(buf[0], 0xdd);
+
+  buf[2] = 0xda;
+  t.same(buf[2], 0xda);
+
+  buf[1] = -1;
+  t.same(buf[1], 0xff);
+
+  t.same(typeof buf[-1], 'undefined');
+  t.end();
+});
+
+test('array access, range error', function (t) {
+  t.plan(3);
+  var buf = BitWriter(1);
+  try { buf[0] = 0xffff }
+  catch (err) {
+    t.same(err.name, 'RangeError');
+    t.same(err.min, -128);
+    t.same(err.max, 255);
+  }
   t.end();
 });
