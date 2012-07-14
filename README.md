@@ -13,6 +13,12 @@ npm install bitwriter
 var BitWriter = require('bitwriter');
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
 # API
 `BitWriter` Inherits from `Buffer`, so you get all of the buffer methods
 (`fill`, `slice`, `copy`, etc) as well.
