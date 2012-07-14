@@ -91,8 +91,8 @@ BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   if (type.length > remaining)
     throw overflowError(integer, type.length, remaining);
 
-  type.method.call(this._buffer, integer, this._pos);
-  this._pos += type.length;
+  type.method.call(this._buffer, integer, this.position());
+  this.move(type.length);
   return this;
 };
 
@@ -160,16 +160,30 @@ BitWriter.prototype.attach = function (obj) {
 BitWriter.prototype.write8 = function (v) {
   return this.write(v, {size: 8});
 };
-/** convenience */
 BitWriter.prototype.write16 = function (v) {
   return this.write(v, {size: 16});
 };
-/** convenience */
 BitWriter.prototype.write32 = function (v) {
   return this.write(v, {size: 32});
 };
 BitWriter.prototype.full = function () {
   return this.remaining() === 0;
+};
+BitWriter.prototype.position = function (p) {
+  if (typeof p !== 'undefined') {
+    this._pos = p;
+    return this;
+  }
+  return this._pos;
+};
+BitWriter.prototype.reset = function () {
+  this._buffer.fill(0);
+  this.position(0);
+  return this;
+};
+BitWriter.prototype.move = function (amount) {
+  var pos = this.position();
+  return this.position(pos + amount);
 };
 
 BitWriter.prototype._generateMethodTable = function generateMethodTable() {
