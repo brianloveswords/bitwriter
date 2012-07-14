@@ -129,10 +129,25 @@ test('raw bytes, buffer', function (t) {
 test('raw bytes, array, bad types', function (t) {
   var buf = new BitWriter(8);
   var arr = [1, 2, 'wut', 'lol', { wrench: true }];
-  buf.write(arr);
+
+  try { buf.write(arr) }
+  catch (err) {
+    console.dir(err);
+    t.same(err.name, 'TypeError');
+    t.end();
+  }
 });
 
+test('raw bytes, array, too big', function (t) {
+  var buf = new BitWriter(8);
+  var arr = [Infinity, 1e10, 1e30];
 
+  try { buf.write(arr) }
+  catch (err) {
+    t.same(err.name, 'RangeError');
+    t.end();
+  }
+});
 
 test('using with Buffer.concat', function (t) {
   var str = 'you look nice today';
