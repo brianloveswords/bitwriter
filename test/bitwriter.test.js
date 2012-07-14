@@ -262,3 +262,35 @@ test('given a huge number', function (t) {
   }
   t.end();
 });
+
+test('read position', function (t) {
+  var buf = BitWriter(4);
+  buf.write(1);
+  t.same(buf.position(), 1, 'should read position');
+  t.end();
+});
+
+test('write position', function (t) {
+  var buf = BitWriter(4);
+  buf.write(1);
+  buf.position(0);
+  t.same(buf.position(), 0, 'should write position');
+  t.end();
+});
+
+test('reseting to 0', function (t) {
+  var buf = BitWriter(4);
+  buf.write('lol');
+  buf.reset();
+  t.same(buf.out(), Buffer([0x00, 0x00, 0x00, 0x00]));
+  t.end();
+});
+
+test('moving cursor', function (t) {
+  var buf = BitWriter(4);
+  buf.write('helo');
+  buf.move(-2);
+  t.same(buf.position(), 2);
+  t.same(buf.remaining(), 2);
+  t.end();
+});
