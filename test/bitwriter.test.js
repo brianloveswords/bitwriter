@@ -1,5 +1,5 @@
 var test = require('tap').test;
-var BitWriter = require('../lib/bitwriter');
+var BitWriter = require('..');
 test('unsigned 8 bit write', function (t) {
   var buf = new BitWriter(4);
   buf.write(0x01);
@@ -194,3 +194,71 @@ test('inspecting', function (t) {
   t.end();
 });
 
+test('sized string writing, smaller', function (t) {
+  var buf = BitWriter(8);
+  var string = 'cat';
+  buf.write(string, { size: 8 });
+  t.same(buf.out(), Buffer('cat\u0000\u0000\u0000\u0000\u0000'));
+  t.end();
+});
+
+test('sized string writing, larger', function (t) {
+  var buf = BitWriter(8);
+  var string = 'superduperawesome';
+  buf.write(string, { size: 8 });
+  t.same(buf.out(), Buffer('superdup'));
+  t.end();
+});
+
+test('BitWriter#remaining', function (t) {
+  var buf = BitWriter(8);
+  buf.write('hi');
+  t.same(buf.remaining(), 5);
+  buf.write('you');
+  t.same(buf.remaining(), 1);
+  t.end();
+});
+
+
+test('trying to write string past the end', function (t) {
+  var buf = BitWriter(4);
+  t.plan(2);
+
+  try { buf.write('radical'); }
+  catch (err) {
+    t.same(err.name, 'OverflowError');
+    t.same(err.amountOver, 3);
+  }
+});
+
+test('trying to write int past the end', function (t) {
+  var buf = BitWriter(2);
+
+  t.plan(2);
+  try { buf.write32(1) }
+  catch (err) {
+    t.same(err.name, 'OverflowError');
+    t.same(err.amountOver, 2);
+  }
+  t.end();
+});
+
+test('given a number and an invalid size', function (t) {
+  var buf = BitWriter(4);
+  try { buf.write(10, { size: 12 }) }
+  catch (err) {
+    t.same(err.name, 'RangeError');
+    t.same(err.sizeGiven, 12);
+  }
+  t.end();
+});
+
+test('given a huge number', function (t) {
+  var buf = BitWriter(8);
+  try { buf.write(1e12) }
+  catch (err) {
+    t.same(err.name, 'RangeError')
+    t.same(err.integer, 1e12);
+  }
+  t.end();
+});
