@@ -7,16 +7,17 @@ A better interface for writing bytes to a buffer with a priority on safety.
 ```bash
 $ npm install bitwriter
 ```
-## Usage
-
-```js
-var BitWriter = require('bitwriter');
-```
 
 ## Tests
 
 ```bash
 $ npm test
+```
+
+## Usage
+
+```js
+var BitWriter = require('bitwriter');
 ```
 
 # API
