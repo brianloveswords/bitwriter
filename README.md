@@ -22,7 +22,8 @@ var BitWriter = require('bitwriter');
 
 # API
 `BitWriter` Inherits from `Buffer`, so you get all of the buffer methods
-(`fill`, `slice`, `copy`, etc) as well.
+(`fill`, `slice`, `copy`, etc) as well. You can also use `Buffer.concat`
+with instances.
 
 ## BitWriter(*length, [endianness='BE']*)
 
