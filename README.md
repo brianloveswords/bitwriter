@@ -1,4 +1,4 @@
-# bitwriter
+# bitwriter [![Build Status](https://secure.travis-ci.org/brianloveswords/bitwriter.png?branch=master)](http://travis-ci.org/brianloveswords/bitwriter)
 
 A better interface for writing bytes to a buffer with a priority on safety.
 

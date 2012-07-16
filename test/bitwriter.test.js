@@ -1,5 +1,7 @@
 var test = require('tap').test;
 var BitWriter = require('..');
+var Buffer = require('../lib/buffer.js');
+
 test('unsigned 8 bit write', function (t) {
   var buf = new BitWriter(4);
   buf.write(0x01);
@@ -214,12 +216,6 @@ test('attaching to object', function (t) {
   obj.write('lol');
   t.same(obj.playItAgain, 'sam');
  t.same(obj.data.out(), Buffer('lol'));
-  t.end();
-});
-
-test('inspecting', function (t) {
-  var buf = BitWriter(4);
-  t.same(buf.inspect(), '<BitWriter 00 00 00 00>');
   t.end();
 });
 

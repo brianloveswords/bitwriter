@@ -1,6 +1,7 @@
 var util = require('util');
 var errors = require('./lib/errors.js');
 var Range = require('./lib/range.js');
+var Buffer = require('./lib/buffer.js');
 var bufproto = Buffer.prototype;
 
 function BitWriter(length, endianness) {
