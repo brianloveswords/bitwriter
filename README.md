@@ -27,8 +27,6 @@ with instances.
 
 ## BitWriter(*length, [endianness='BE']*)
 
-The constructor takes one mandatory and one optional argument.
-
 ```js
 var buf = BitWriter(4); 
 buf.inspect(); // <BitWriter 00 00 00 00>
@@ -36,10 +34,24 @@ buf.inspect(); // <BitWriter 00 00 00 00>
 // or if you need a little endian writer
 buf = BitWriter(4, 'LE');
 ```
+## BitWriter(*array, [endianness='BE']*)
+**@see** `BitWriter#writeInt`<br>
+***
+
+You can also specify an array of integers or objects representing
+integers. Uses `BitWriter#writeInt` internally.
+
+```js
+var buf = BitWriter([ 1, 2, 64738, 23 ]);
+buf.out(); // <Buffer 01 02 fc e2 17>
+  
+var obuf = BitWriter([ 1, 2, 64738, { value: 23, width: 16 } ]);
+obuf.out(); // <Buffer 01 02 fc e2 00 17>
+```
 
 ## BitWriter#write(*data, [opts]*)
 **@returns** `this`<br>
-**@see** `BitWriter#writeInteger`<br>
+**@see** `BitWriter#writeInt`<br>
 **@see** `BitWriter#writeString`<br>
 **@see** `BitWriter#writeRaw`
 ***
@@ -118,7 +130,7 @@ Throws `OverflowError` if there are less than `string.length` bytes left
 in the buffer.
 
 
-## BitWriter#writeInteger(*integer, [opts]*)
+## BitWriter#writeInt(*integer, [opts]*)
 **@returns** `this`<br>
 **@throws** `RangeError`<br>
 **@throws** `OverflowError`<br>

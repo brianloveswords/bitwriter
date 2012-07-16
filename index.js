@@ -48,7 +48,7 @@ BitWriter.prototype.initialize = function initialize(input, endianness) {
     this.setupBuffer(length);
 
     inputs.forEach(function (obj) {
-      this.write.call(this, obj)
+      this.writeInt.call(this, obj)
     }.bind(this));
 
     return this;
