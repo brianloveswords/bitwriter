@@ -385,3 +385,16 @@ test('array access, range error', function (t) {
   t.end();
 });
 
+test('convenience constructor', function (t) {
+  var buf, expect;
+
+  buf = BitWriter([ 1, 2, 64738, 23 ]);
+  expect = Buffer([0x01, 0x02, 0xfc, 0xe2, 0x17])
+  t.same(buf.out(), expect);
+
+  buf = BitWriter([ 1, 2, 64738, { value: 23, width: 16 } ]);
+  expect = Buffer([0x01, 0x02, 0xfc, 0xe2, 0x00, 0x17])
+  t.same(buf.out(), expect);
+
+  t.end();
+});

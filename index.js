@@ -4,27 +4,71 @@ var Range = require('./lib/range.js');
 var Buffer = require('./lib/buffer.js');
 var bufproto = Buffer.prototype;
 
-function BitWriter(length, endianness) {
+function BitWriter(input, endianness) {
   if (!(this instanceof BitWriter))
-    return new BitWriter(length, endianness);
+    return new BitWriter(input, endianness);
   this.initialize.apply(this, arguments)
 }
 util.inherits(BitWriter, Buffer);
-BitWriter.prototype.initialize = function initialize(length, endianness) {
-  if (typeof length === 'string') return new Buffer(length);
-  var buf = this._buffer = Buffer(length);
-  buf.fill(0);
 
-  // this give us compatibility with a bunch of buffer methods
-  this.parent = this._buffer.parent;
-  this.length = this._buffer.length;
-  this.offset = this._buffer.offset;
-  this.pool = this._buffer.pool;
+BitWriter.getSize = function (n) {
+  var range = BitWriter.RANGE;
+  if (range[8].test(n)) return 8;
+  if (range[16].test(n)) return 16;
+  if (range[32].test(n)) return 32;
+}
 
+BitWriter.prototype.initialize = function initialize(input, endianness) {
   this._pos = 0;
   this._endianness = endianness || 'BE';
   this._generateMethodTable();
+
+  if (typeof input === 'string') return new Buffer(input);
+
+  if (util.isArray(input)) {
+    var inputs = input.map(function (input) {
+      var obj = {};
+      if (typeof input === 'number') {
+        obj.value = input;
+        obj.width = BitWriter.getSize(input);
+      } else {
+        obj = input
+      }
+      return obj;
+    });
+
+    var length = inputs.reduce(function (length, obj) {
+      return length + (obj.width / 8);
+    }, 0);
+
+    this.setupBuffer(length);
+
+    inputs.map(function (obj) {
+      return [obj.value, { width: obj.width }]
+    }).forEach(function (args) {
+      this.write.apply(this, args)
+    }.bind(this));
+  }
+
+  else if (typeof input === 'number') {
+    this.setupBuffer(input)
+  }
+};
+
+BitWriter.prototype.setupBuffer = function (length, opts) {
+  opts = opts || { fill: true };
+
+  var buf = this._buffer = Buffer(length);
+  if (opts.fill) buf.fill(0);
+
+  // this give us compatibility with a bunch of buffer methods
+  this.parent = buf.parent;
+  this.length = buf.length;
+  this.offset = buf.offset;
+  this.pool = buf.pool;
   this._makeArrayLike();
+
+  return this;
 };
 
 /**
@@ -61,6 +105,7 @@ BitWriter.prototype.write = function write(data) {
  * @param {Integer} integer
  * @param {Object} opts
  *   - `size`: specify integer size
+ *   - `width`: alias for size
  * @throws {RangeError} when `size` is invalid or number is too big
  * @throws {DispatchError} when it can't find a method to dispatch to
  * @throws {OverflowError} when there aren't enough bytes left to write int
@@ -71,18 +116,19 @@ BitWriter.prototype.write = function write(data) {
 
 BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   var type;
-  var range = BitWriter.UNSIGNED_RANGE[32];
+  var range = BitWriter.RANGE[32];
   var validSizes = BitWriter.INT_SIZES;
 
   if (!range.test(integer))
     throw errors.range(integer, range);
 
-  if (opts && opts.size) {
-    if (!~validSizes.indexOf(opts.size))
-      throw errors.size(opts.size, validSizes);
+  if (opts && (opts.size || opts.width)) {
+    var width = opts.size || opts.width;
+    if (!~validSizes.indexOf(width))
+      throw errors.size(width, validSizes);
 
     var methodlist = this._methods.bySize;
-    type = methodlist[integer > 0 ? 'unsigned' : 'signed'][opts.size];
+    type = methodlist[integer > 0 ? 'unsigned' : 'signed'][width];
   }
   else {
     type = this._methods.filter(function (m) {
@@ -161,7 +207,7 @@ BitWriter.prototype.writeRaw = function writeRaw(arry, opts) {
   // get an AssertionError from buffer. we also ensure that the value is
   // within the boundaries of an eight bit integer or we'll get unexpected
   // results down the line somewhere.
-  var eightBitRange = BitWriter.UNSIGNED_RANGE[8];
+  var eightBitRange = BitWriter.RANGE[8];
   for (var n = 0; n < arry.length; n++) {
     if (typeof arry[n] !== 'number')
       throw errors.arrayType(arry, n);
@@ -245,31 +291,32 @@ BitWriter.prototype._copyBuffer = function copyBuffer(buf) {
 
 BitWriter.prototype._generateMethodTable = function generateMethodTable() {
   var e = this._endianness;
+  var unsigned = BitWriter.UNSIGNED_RANGE;
+  var signed = BitWriter.SIGNED_RANGE;
   this._methods = [
     { method: bufproto['writeUInt8'],
       length: 1,
-      test: gentestInt(0, 0xff),
+      test: unsigned[8].test
     }, {
       method: bufproto['writeUInt16' + e],
       length: 2,
-      test: gentestInt(0, 0xffff),
+      test: unsigned[16].test
     }, {
       method: bufproto['writeUInt32' + e],
       length: 4,
-      test: gentestInt(0, 0xffffffff),
+      test: unsigned[32].test
     }, {
       method: bufproto['writeInt8'],
       length: 1,
-      test: gentestInt(-0x80, 0x7f)
+      test: signed[8].test
     }, {
-      str: 'writeInt16' + e,
       method: bufproto['writeInt16' + e],
       length: 2,
-      test: gentestInt(-0x8000, 0x7fff)
+      test: signed[16].test
     }, {
       method: bufproto['writeInt32' + e],
       length: 4,
-      test: gentestInt(-0x80000000, 0x7fffffff)
+      test: signed[32].test,
     }
   ];
   this._methods.bySize = {
@@ -287,7 +334,7 @@ BitWriter.prototype._generateMethodTable = function generateMethodTable() {
 };
 
 BitWriter.prototype._makeArrayLike = function makeArrayLike() {
-  var eightBitRange = BitWriter.UNSIGNED_RANGE[8];
+  var eightBitRange = BitWriter.RANGE[8];
   var len = this.length;
   for (var n = 0; n < this.length; n++) {
     (function (n) {
@@ -304,14 +351,23 @@ BitWriter.prototype._makeArrayLike = function makeArrayLike() {
     }).bind(this)(n);
   }
 };
-BitWriter.UNSIGNED_RANGE = {
+BitWriter.RANGE = {
   '8': Range(-0x80, 0xff),
   '16': Range(-0x8000, 0xffff),
   '32': Range(-0x80000000, 0xffffffff)
 };
+BitWriter.UNSIGNED_RANGE = {
+  '8': Range(0, 0xff),
+  '16': Range(0, 0xffff),
+  '32': Range(0, 0xffffffff)
+};
+BitWriter.SIGNED_RANGE = {
+  '8': Range(-0x80, 0x7f),
+  '16': Range(-0x8000, 0x7fff),
+  '32': Range(-0x80000000, 0x7fffffff)
+};
+
 BitWriter.INT_SIZES = [8, 16, 32];
 BitWriter.NULL_BYTE = Buffer([0x00]);
 
-function between(v, min, max) { return v >= min && v <= max }
-function gentestInt(min, max) { return function (v) { return between(v, min, max) } }
 module.exports = BitWriter;
