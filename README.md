@@ -131,14 +131,21 @@ in the buffer.
 
 
 ## BitWriter#writeInt(*integer, [opts]*)
+## BitWriter#writeInt(*opts*)
 **@returns** `this`<br>
 **@throws** `RangeError`<br>
 **@throws** `OverflowError`<br>
 **@throws** `DispatchError`
 *** 
+### Options
+- `size`: specify integer size
+- `width`: alias for size
+
 Writes an integer to the buffer, testing against the maximum and minimum
 values 8, 16 and 32 bit numbers, both signed and unsigned, to figure out
 how best to store your bytes.
+
+If a single object is passed, tries to find the integer value from `opts.value`.
 
 **Unsigned integers**
 ```js
