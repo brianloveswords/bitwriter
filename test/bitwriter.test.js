@@ -398,3 +398,11 @@ test('convenience constructor', function (t) {
 
   t.end();
 });
+
+test('write() with an object', function (t) {
+  var buf = BitWriter(4);
+  var value = buf.write({ value: 0xff, width: 32 });
+  var expect = Buffer([0x00, 0x00, 0x00, 0xff]);
+  t.same(value, expect);
+  t.end();
+});

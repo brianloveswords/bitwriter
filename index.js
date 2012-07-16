@@ -23,7 +23,11 @@ BitWriter.prototype.initialize = function initialize(input, endianness) {
   this._endianness = endianness || 'BE';
   this._generateMethodTable();
 
-  if (typeof input === 'string') return new Buffer(input);
+  if (typeof input === 'string') {
+    this.setupBuffer(input.length);
+    this.write(input);
+    return this;
+  }
 
   if (util.isArray(input)) {
     var inputs = input.map(function (input) {
@@ -43,16 +47,15 @@ BitWriter.prototype.initialize = function initialize(input, endianness) {
 
     this.setupBuffer(length);
 
-    inputs.map(function (obj) {
-      return [obj.value, { width: obj.width }]
-    }).forEach(function (args) {
-      this.write.apply(this, args)
+    inputs.forEach(function (obj) {
+      this.write.call(this, obj)
     }.bind(this));
+
+    return this;
   }
 
-  else if (typeof input === 'number') {
-    this.setupBuffer(input)
-  }
+  // probably a number representing a length at this point
+  this.setupBuffer(input)
 };
 
 BitWriter.prototype.setupBuffer = function (length, opts) {
@@ -92,11 +95,17 @@ BitWriter.prototype.out = function out() {
  */
 
 BitWriter.prototype.write = function write(data) {
-  if (typeof data === 'string')
-    return this.writeString.apply(this, arguments);
   if (util.isArray(data) || Buffer.isBuffer(data))
     return this.writeRaw.apply(this, arguments)
-  else return this.writeInt.apply(this, arguments);
+
+  var value = data;
+  if (data.value)
+    value = data.value;
+
+  if (typeof value === 'string')
+    return this.writeString.apply(this, arguments);
+
+  return this.writeInt.apply(this, arguments);
 };
 
 /**
@@ -118,6 +127,9 @@ BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   var type;
   var range = BitWriter.RANGE[32];
   var validSizes = BitWriter.INT_SIZES;
+
+  if (typeof integer === 'object' && integer.value)
+    opts = integer, integer = opts.value
 
   if (!range.test(integer))
     throw errors.range(integer, range);
