@@ -175,6 +175,17 @@ var buf = BitWriter(4);
 buf.write(-128, { size: 32 }); // <BitWriter ff ff ff 80>
 ```
 
+Returns `this` so you can chain a bunch of writes:
+
+```js
+var output = BitWriter(4);
+output
+  .write(0x01)
+  .write(0x02)
+  .write(0x03)
+  .write(0x04); // <BitWriter 01 02 03 04>
+```
+
 Throws `RangeError` an invalid `size` option is given. Valid sizes can
 be found in the constant `BitWriter.INT_SIZES` (currently
 `[8, 16, 32]`).
