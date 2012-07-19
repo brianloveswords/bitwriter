@@ -131,6 +131,12 @@ BitWriter.prototype.writeInt = function writeInt(integer, opts) {
   if (typeof integer === 'object' && integer.value)
     opts = integer, integer = opts.value
 
+  if (typeof integer === 'string') {
+    if (!integer.match(/^\d+$/))
+      throw errors.type(integer, 'integer');
+    integer = parseInt(integer, 10);
+  }
+
   if (!range.test(integer))
     throw errors.range(integer, range);
 
@@ -258,14 +264,14 @@ BitWriter.prototype.attach = function (obj, key) {
 };
 
 /** convenience */
-BitWriter.prototype.write8 = function (v) {
-  return this.write(v, {size: 8});
+BitWriter.prototype.write8 = function (value) {
+  return this.writeInt(value, {size: 8});
 };
-BitWriter.prototype.write16 = function (v) {
-  return this.write(v, {size: 16});
+BitWriter.prototype.write16 = function (value) {
+  return this.writeInt(value, {size: 16});
 };
-BitWriter.prototype.write32 = function (v) {
-  return this.write(v, {size: 32});
+BitWriter.prototype.write32 = function (value) {
+  return this.writeInt(value, {size: 32});
 };
 BitWriter.prototype.full = function () {
   return this.remaining() === 0;

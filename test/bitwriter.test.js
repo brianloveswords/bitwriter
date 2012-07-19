@@ -406,3 +406,15 @@ test('write() with an object', function (t) {
   t.same(value, expect);
   t.end();
 });
+
+test('write8() a string', function (t) {
+  var buf = BitWriter(4);
+  var value = buf.write8('255');
+  var expect = Buffer([0xff, 0x00, 0x00, 0x00]);
+  t.same(value, expect);
+
+  try { buf.write8('lol'); t.fail('should not be able to write stringy string') }
+  catch (err) { t.same(err.name, 'TypeError') }
+
+  t.end();
+});
