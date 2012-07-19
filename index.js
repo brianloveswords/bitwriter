@@ -115,6 +115,7 @@ BitWriter.prototype.write = function write(data) {
  * @param {Object} opts
  *   - `size`: specify integer size
  *   - `width`: alias for size
+ * @throws {TypeError} when `integer` is an unconvertible string.
  * @throws {RangeError} when `size` is invalid or number is too big
  * @throws {DispatchError} when it can't find a method to dispatch to
  * @throws {OverflowError} when there aren't enough bytes left to write int

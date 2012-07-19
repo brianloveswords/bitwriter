@@ -134,8 +134,9 @@ in the buffer.
 ## BitWriter#writeInt(*opts*)
 **@returns** `this`<br>
 **@throws** `RangeError`<br>
+**@throws** `TypeError`<br>
 **@throws** `OverflowError`<br>
-**@throws** `DispatchError`
+**@throws** `DispatchError`<br>
 *** 
 ### Options
 - `size`: specify integer size
@@ -185,6 +186,9 @@ output
   .write(0x03)
   .write(0x04); // <BitWriter 01 02 03 04>
 ```
+
+Throws `TypeError` if it gets a string that is not completely composed
+of digits.
 
 Throws `RangeError` an invalid `size` option is given. Valid sizes can
 be found in the constant `BitWriter.INT_SIZES` (currently
