@@ -358,11 +358,11 @@ BitWriter.prototype._makeArrayLike = function makeArrayLike() {
   for (var n = 0; n < this.length; n++) {
     (function (n) {
       Object.defineProperty(this, n, {
-        get: function () { return this[n] },
+        get: function () { return this._buffer[n] },
         set: function (v) {
           if (!eightBitRange.test(v))
             throw errors.range(v, eightBitRange);
-          return this[n] = v;
+          return this._buffer[n] = v;
         },
         enumerable: true,
         configurable: true
