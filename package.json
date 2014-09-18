@@ -2,7 +2,7 @@
   "author": "Brian J. Brennan <brianloveswords@gmail.com> (http://bjb.io)",
   "name": "bitwriter",
   "description": "A better interface for writing bytes to Buffers",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "homepage": "https://github.com/brianloveswords/bitwriter",
   "repository": {
     "type": "git",
