@@ -11,6 +11,10 @@ function BitWriter(input, endianness) {
 }
 util.inherits(BitWriter, Buffer);
 
+BitWriter.prototype.fill = function (value) {
+  return this._buffer.fill(value);
+}
+
 BitWriter.getSize = function (n) {
   var range = BitWriter.RANGE;
   if (range[8].test(n)) return 8;
@@ -66,7 +70,7 @@ BitWriter.prototype.setupBuffer = function (length, opts) {
 
   // this give us compatibility with a bunch of buffer methods
   this.parent = buf.parent;
-  this.length = buf.length;
+  this.bufferLength = buf.length;
   this.offset = buf.offset;
   this.pool = buf.pool;
   this._makeArrayLike();
@@ -189,8 +193,8 @@ BitWriter.prototype.writeString = function writeString(string, opts) {
     return this.write(Buffer.concat([buf, nulls]));
   }
 
-  if (buf.length > this.remaining())
-    throw errors.overflow(string, buf.length, this.remaining());
+  if (len > this.remaining())
+    throw errors.overflow(string, len, this.remaining());
 
   // we only want to write the null byte if the user hasn't said not to
   // and if there's room left in the main buffer
@@ -243,7 +247,8 @@ BitWriter.prototype.writeRaw = function writeRaw(arry, opts) {
  * @return {Integer}
  */
 BitWriter.prototype.remaining = function () {
-  return this.length - this._pos;
+  var len = this.bufferLength || this._buffer.length;
+  return len - this._pos;
 };
 
 /**
@@ -278,7 +283,8 @@ BitWriter.prototype.full = function () {
   return this.remaining() === 0;
 };
 BitWriter.prototype.position = function (p) {
-  var range = Range(0, this.length);
+  var len = this.bufferLength || this._buffer.length
+  var range = Range(0, len);
   if (typeof p !== 'undefined') {
     if (typeof p !== 'number')
       throw errors.type(p, 'Number');
@@ -302,7 +308,7 @@ BitWriter.prototype.move = function (amount) {
 };
 
 BitWriter.prototype._copyBuffer = function copyBuffer(buf) {
-  buf.copy(this, this.position());
+  buf.copy(this._buffer, this.position());
   this.move(buf.length);
   return this;
 };
@@ -354,8 +360,7 @@ BitWriter.prototype._generateMethodTable = function generateMethodTable() {
 
 BitWriter.prototype._makeArrayLike = function makeArrayLike() {
   var eightBitRange = BitWriter.RANGE[8];
-  var len = this.length;
-  for (var n = 0; n < this.length; n++) {
+  for (var n = 0; n < this.bufferLength; n++) {
     (function (n) {
       Object.defineProperty(this, n, {
         get: function () { return this._buffer[n] },
