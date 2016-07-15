@@ -161,7 +161,7 @@ test('using with Buffer.concat', function (t) {
   var str = 'you look nice today';
   var buf = BitWriter(str.length);
   buf.write(str);
-  var newbuf = Buffer.concat([buf, Buffer([0x00])]);
+  var newbuf = Buffer.concat([buf._buffer, Buffer([0x00])]);
   t.same(newbuf, Buffer([0x79, 0x6f, 0x75, 0x20, 0x6c, 0x6f, 0x6f, 0x6b, 0x20, 0x6e, 0x69, 0x63, 0x65, 0x20, 0x74, 0x6f, 0x64, 0x61, 0x79, 0x00]));
   t.end();
 });
@@ -170,7 +170,7 @@ test('Buffer#slice', function (t) {
   var str = 'you look nice today';
   var buf = BitWriter(str.length);
   buf.write(str);
-  t.same(buf.slice(0, 3), Buffer('you'));
+  t.same(buf._buffer.slice(0, 3), Buffer('you'));
   t.end();
 });
 
@@ -344,14 +344,12 @@ test('moving cursor, bad values', function (t) {
     buf.move({ham: 'sandwich'});
     t.fail('should fail on non-numeric input');
   } catch (err) {
-    console.dir(err);
     t.same(err.name, 'TypeError');
   }
 
   try {
     buf.move(+1000);
   } catch (err) {
-    console.dir(err);
     t.same(err.name, 'RangeError');
   }
   t.end();
@@ -403,7 +401,7 @@ test('write() with an object', function (t) {
   var buf = BitWriter(4);
   var value = buf.write({ value: 0xff, width: 32 });
   var expect = Buffer([0x00, 0x00, 0x00, 0xff]);
-  t.same(value, expect);
+  t.same(value._buffer, expect);
   t.end();
 });
 
@@ -411,7 +409,7 @@ test('write8() a string', function (t) {
   var buf = BitWriter(4);
   var value = buf.write8('255');
   var expect = Buffer([0xff, 0x00, 0x00, 0x00]);
-  t.same(value, expect);
+  t.same(value._buffer, expect);
 
   try { buf.write8('lol'); t.fail('should not be able to write stringy string') }
   catch (err) { t.same(err.name, 'TypeError') }
